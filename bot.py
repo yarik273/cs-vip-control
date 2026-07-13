@@ -44,7 +44,7 @@ def send_vip_status(message):
         
         if lines:
             response = (
-                "📊 СПИСОК ПРИВІЛЕЙ ЩО ЗАКІНЧУЄТЬСЯ:\n\n" + 
+                "📊 **СПИСОК ПРИВІЛЕЙ, ЯКІ ЗАКІНЧУЮТЬСЯ:**\n\n" + 
                 "\n".join(lines) + 
                 "\n\n👉 Для купівлі або продовження привілей зв'яжіться з адміністрацією."
             )
@@ -59,6 +59,6 @@ def send_vip_status(message):
         bot.reply_to(message, f"❌ Системна помилка: {str(e)}")
 
 if __name__ == "__main__":
-    print("Бот контролю VIP запущений у фоновому режимі...")
+    print("Бот контролю VIP запущений...")
     bot.infinity_polling()
     
