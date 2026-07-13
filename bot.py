@@ -9,17 +9,23 @@ bot = telebot.TeleBot(BOT_TOKEN)
 @bot.message_handler(commands=['vip', 'vip_status'])
 def send_vip_status(message):
     try:
+        # Перевіряємо, чи взагалі існує файл
+        if not os.path.exists('vip_users.json'):
+            bot.reply_to(message, "❌ Помилка: Файл `vip_users.json` не знайдено в репозиторії!")
+            return
+
+        # Зчитуємо файл
         with open('vip_users.json', 'r', encoding='utf-8') as f:
             users = json.load(f)
-
+        
         today = datetime.now().date()
         lines = []
-
+        
         for user in users:
             expire_date = datetime.strptime(user['expire_date'], "%Y-%m-%d").date()
             days_left = (expire_date - today).days
             formatted_date = expire_date.strftime("%d.%m.%Y")
-
+            
             if days_left > 5:
                 status = f"⏳ Дійсна до: {formatted_date} (залишилось {days_left} дн.)"
             elif 0 < days_left <= 5:
@@ -28,7 +34,7 @@ def send_vip_status(message):
                 status = f"🚨 **ЗАКІНЧУЄТЬСЯ СЬОГОДНІ ({formatted_date})!**"
             else:
                 status = f"❌ **ТЕРМІН ЗАКІНЧИВСЯ ({formatted_date})!**"
-
+            
             player_info = (
                 f"👤 **Нік:** {user['nickname']}\n"
                 f"🆔 **Steam:** `{user['steam_id']}`\n"
@@ -37,7 +43,7 @@ def send_vip_status(message):
                 f"────────────────"
             )
             lines.append(player_info)
-
+        
         if lines:
             response = (
                 "📊 **ПОВНИЙ СПИСОК ПРИВІЛЕЙ НА СЕРВЕРІ:**\n\n" + 
@@ -46,13 +52,15 @@ def send_vip_status(message):
             )
         else:
             response = "Список привілей порожній."
-
+            
         bot.reply_to(message, response, parse_mode="Markdown")
-
+        
+    except json.JSONDecodeError:
+        bot.reply_to(message, "❌ Помилка: Неправильний формат тексту у файлі `vip_users.json`. Перевірте коми та дужки!")
     except Exception as e:
-        bot.reply_to(message, "Помилка при зчитуванні файлу. Перевірте формат JSON.")
+        bot.reply_to(message, f"❌ Системна помилка: {str(e)}")
 
 if __name__ == "__main__":
     print("Бот контролю VIP запущений...")
     bot.infinity_polling()
-  
+    
