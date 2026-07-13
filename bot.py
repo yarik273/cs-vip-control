@@ -2,6 +2,11 @@ import os
 import json
 from datetime import datetime
 import telebot
+import threading      # <--- Проверьте, чтобы эта строка была здесь!
+import http.server
+import socketserver
+
+# Функция фейкового сервера
 def run_fake_server():
     port = int(os.environ.get("PORT", 8080))
     handler = http.server.SimpleHTTPRequestHandler
@@ -9,9 +14,11 @@ def run_fake_server():
     with socketserver.TCPServer(("", port), handler) as httpd:
         httpd.serve_forever()
 
-# Сразу же запускаем сервер в фоновом потоке
+# Теперь эта строка сработает без ошибок
 threading.Thread(target=run_fake_server, daemon=True).start()
-# =======================================
+
+# Дальше идет ваш BOT_TOKEN и остальной код...
+
 
 # Зчитуємо токен
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
