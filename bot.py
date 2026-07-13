@@ -3,7 +3,11 @@ import json
 from datetime import datetime
 import telebot
 
+# Зчитуємо токен
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
+if not BOT_TOKEN:
+    raise ValueError("Токен BOT_TOKEN не знайдено в змінних оточення!")
+
 bot = telebot.TeleBot(BOT_TOKEN)
 
 @bot.message_handler(commands=['vip', 'vip_status'])
@@ -43,15 +47,17 @@ def send_vip_status(message):
             lines.append(player_info)
         
         if lines:
+            # Змінено заголовок, оскільки виводяться всі користувачі
             response = (
-                "📊 **СПИСОК ПРИВІЛЕЙ, ЯКІ ЗАКІНЧУЮТЬСЯ:**\n\n" + 
+                "📊 *СТАТУС VIP ПРИВІЛЕЙ:*\n\n" + 
                 "\n".join(lines) + 
                 "\n\n👉 Для купівлі або продовження привілей зв'яжіться з адміністрацією."
             )
         else:
             response = "Список привілей порожній."
             
-        bot.reply_to(message, response)
+        # Додано parse_mode='Markdown' для відображення жирного шрифту
+        bot.reply_to(message, response, parse_mode='Markdown')
         
     except json.JSONDecodeError:
         bot.reply_to(message, "❌ Помилка: Неправильний формат тексту у файлі `vip_users.json`!")
@@ -60,5 +66,6 @@ def send_vip_status(message):
 
 if __name__ == "__main__":
     print("Бот контролю VIP запущений...")
+    # Цей рядок обов'язковий, щоб бот почав слухати сервери Telegram
     bot.infinity_polling()
     
