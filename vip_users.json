@@ -1,1 +1,15 @@
+[
+  {
+    "nickname": "Legioner",
+    "steam_id": "STEAM_0:0:12345678",
+    "privilege": "VIP",
+    "expire_date": "2026-07-25"
+  },
+  {
+    "nickname": "Admin_MonstR",
+    "steam_id": "STEAM_0:1:98765432",
+    "privilege": "ADMIN",
+    "expire_date": "2026-07-15"
+  }
+]
 
