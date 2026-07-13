@@ -3,7 +3,7 @@
     "nickname": "Legioner",
     "steam_id": "STEAM_0:0:12345678",
     "privilege": "VIP",
-    "expire_date": "2026-07-20"
+    "expire_date": "2026-07-18"
   },
   {
     "nickname": "Admin_MonstR",
@@ -15,7 +15,7 @@
     "nickname": "Tornado",
     "steam_id": "VALVE_0:0:11223344",
     "privilege": "PREMIUM",
-    "expire_date": "2026-07-13"
+    "expire_date": "2026-07-20"
   }
 ]
 
