@@ -10,6 +10,12 @@
     "steam_id": "STEAM_0:1:98765432",
     "privilege": "ADMIN",
     "expire_date": "2026-07-15"
+  },
+  {
+    "nickname": "Tornado",
+    "steam_id": "VALVE_0:0:11223344",
+    "privilege": "PREMIUM",
+    "expire_date": "2026-07-13"
   }
 ]
 
