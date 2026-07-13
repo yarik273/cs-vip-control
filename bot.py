@@ -2,18 +2,6 @@ import os
 import json
 from datetime import datetime
 import telebot
-from flask import Flask
-from threading import Thread
-
-app = Flask('')
-
-@app.route('/')
-def home():
-    return "Бот працює!"
-
-def run_web_server():
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
 
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -45,7 +33,6 @@ def send_vip_status(message):
             else:
                 status = f"❌ ТЕРМІН ЗАКІНЧИВСЯ ({formatted_date})!"
             
-            # Прибрали зі Steam ID символи `,` та `*`, які ламали Telegram
             player_info = (
                 f"👤 Нік: {user['nickname']}\n"
                 f"🆔 Steam: {user['steam_id']}\n"
@@ -64,7 +51,6 @@ def send_vip_status(message):
         else:
             response = "Список привілей порожній."
             
-        # Відправляємо як звичайний текст БЕЗ parse_mode, щоб уникнути будь-яких конфліктів символів
         bot.reply_to(message, response)
         
     except json.JSONDecodeError:
@@ -73,9 +59,6 @@ def send_vip_status(message):
         bot.reply_to(message, f"❌ Системна помилка: {str(e)}")
 
 if __name__ == "__main__":
-    print("Запуск веб-сервера для Render...")
-    Thread(target=run_web_server).start()
-    
-    print("Бот контролю VIP запущений...")
+    print("Бот контролю VIP запущений у фоновому режимі...")
     bot.infinity_polling()
     
