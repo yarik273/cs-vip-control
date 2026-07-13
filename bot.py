@@ -2,11 +2,11 @@ import os
 import json
 from datetime import datetime
 import telebot
-import threading      # <--- Проверьте, чтобы эта строка была здесь!
+import threading
 import http.server
 import socketserver
 
-# Функция фейкового сервера
+# 1. Фейковый веб-сервер для обхода проверки портов на Render
 def run_fake_server():
     port = int(os.environ.get("PORT", 8080))
     handler = http.server.SimpleHTTPRequestHandler
@@ -14,19 +14,16 @@ def run_fake_server():
     with socketserver.TCPServer(("", port), handler) as httpd:
         httpd.serve_forever()
 
-# Теперь эта строка сработает без ошибок
 threading.Thread(target=run_fake_server, daemon=True).start()
 
-# Дальше идет ваш BOT_TOKEN и остальной код...
-
-
-# Зчитуємо токен
+# 2. Инициализация бота
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 if not BOT_TOKEN:
     raise ValueError("Токен BOT_TOKEN не знайдено в змінних оточення!")
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
+# 3. Обработка команды статуса VIP
 @bot.message_handler(commands=['vip', 'vip_status'])
 def send_vip_status(message):
     try:
@@ -64,7 +61,6 @@ def send_vip_status(message):
             lines.append(player_info)
         
         if lines:
-            # Змінено заголовок, оскільки виводяться всі користувачі
             response = (
                 "📊 *СТАТУС VIP ПРИВІЛЕЙ:*\n\n" + 
                 "\n".join(lines) + 
@@ -73,16 +69,17 @@ def send_vip_status(message):
         else:
             response = "Список привілей порожній."
             
-        # Додано parse_mode='Markdown' для відображення жирного шрифту
-        bot.reply_to(message, response, parse_mode='Markdown')
+        # Защита от падения из-за спецсимволов (_) в Steam ID и никнеймах
+        safe_response = response.replace("_", "\\_")
+        bot.reply_to(message, safe_response, parse_mode='Markdown')
         
     except json.JSONDecodeError:
         bot.reply_to(message, "❌ Помилка: Неправильний формат тексту у файлі `vip_users.json`!")
     except Exception as e:
         bot.reply_to(message, f"❌ Системна помилка: {str(e)}")
 
+# 4. Главный цикл запуска
 if __name__ == "__main__":
     print("Бот контролю VIP запущений...")
-    # Цей рядок обов'язковий, щоб бот почав слухати сервери Telegram
     bot.infinity_polling()
     
