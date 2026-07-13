@@ -2,6 +2,16 @@ import os
 import json
 from datetime import datetime
 import telebot
+def run_fake_server():
+    port = int(os.environ.get("PORT", 8080))
+    handler = http.server.SimpleHTTPRequestHandler
+    handler.log_message = lambda *args: None 
+    with socketserver.TCPServer(("", port), handler) as httpd:
+        httpd.serve_forever()
+
+# Сразу же запускаем сервер в фоновом потоке
+threading.Thread(target=run_fake_server, daemon=True).start()
+# =======================================
 
 # Зчитуємо токен
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
