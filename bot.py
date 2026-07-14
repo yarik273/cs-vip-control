@@ -18,7 +18,7 @@ threading.Thread(target=run_fake_server, daemon=True).start()
 
 # 2. Ініціалізація бота та конфігурація прив'язки
 # Використовуємо саме PRIVATE_BOT_TOKEN, як налаштовано у вас на Render
-BOT_TOKEN = os.environ.get('PRIVATE_BOT_TOKEN')
+BOT_TOKEN = os.environ.get('BOT_TOKEN')
 if not BOT_TOKEN:
     raise ValueError("Токен PRIVATE_BOT_TOKEN не знайдено в змінних оточення!")
 
