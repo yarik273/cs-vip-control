@@ -6,7 +6,7 @@ import threading
 import http.server
 import socketserver
 
-# 1. Фейковый веб-сервер для обхода проверки портов на Render
+# 1. Фейковий веб-сервер для обходу перевірки портів на Render
 def run_fake_server():
     port = int(os.environ.get("PORT", 8080))
     handler = http.server.SimpleHTTPRequestHandler
@@ -16,17 +16,36 @@ def run_fake_server():
 
 threading.Thread(target=run_fake_server, daemon=True).start()
 
-# 2. Инициализация бота
-BOT_TOKEN = os.environ.get('BOT_TOKEN')
+# 2. Ініціалізація бота та конфігурація прив'язки
+# Використовуємо саме PRIVATE_BOT_TOKEN, як налаштовано у вас на Render
+BOT_TOKEN = os.environ.get('PRIVATE_BOT_TOKEN')
 if not BOT_TOKEN:
-    raise ValueError("Токен BOT_TOKEN не знайдено в змінних оточення!")
+    raise ValueError("Токен PRIVATE_BOT_TOKEN не знайдено в змінних оточення!")
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# 3. Обработка команды статуса VIP
+# НАЛАШТУВАННЯ ПРИВ'ЯЗКИ
+ALLOWED_CHAT_USERNAME = "volynskiy_public"  # Юзернейм вашої групи
+ALLOWED_THREAD_ID = 738                      # ID дозволеної гілки
+MY_PERSONAL_ID = 5596041220                  # Ваш особистим Telegram ID
+
+# 3. Обробка команди статусу VIP
 @bot.message_handler(commands=['vip', 'vip_status'])
 def send_vip_status(message):
     try:
+        # ПЕРЕВІРКА ДОСТУПУ: Дозволяємо ЛС з вами АБО конкретну гілку у групі
+        is_my_private_chat = (message.chat.type == 'private' and message.chat.id == MY_PERSONAL_ID)
+        is_allowed_group_thread = (
+            message.chat.username and 
+            message.chat.username.lower() == ALLOWED_CHAT_USERNAME.lower() and 
+            message.message_thread_id == ALLOWED_THREAD_ID
+        )
+
+        # Якщо це не ваш особистий чат і не дозволена гілка — повністю ігноруємо
+        if not (is_my_private_chat or is_allowed_group_thread):
+            return  
+
+        # Далі ваш оригінальний код без змін...
         if not os.path.exists('vip_users.json'):
             bot.reply_to(message, "❌ Помилка: Файл `vip_users.json` не знайдено!")
             return
@@ -64,12 +83,11 @@ def send_vip_status(message):
             response = (
                 "📊 *СТАТУС VIP ПРИВІЛЕЙ:*\n\n" + 
                 "\n".join(lines) + 
-                "\n\n👉 Для купівлі або продовження привілей зв'яжіться з адміністрацією.@Marvel_Volynskiy_Public"
+                "\n\n👉 Для купівлі або продовження привілей зв'яжіться з адміністрацією. @Marvel_Volynskiy_Public"
             )
         else:
             response = "Список привілей порожній."
             
-        # Защита от падения из-за спецсимволов (_) в Steam ID и никнеймах
         safe_response = response.replace("_", "\\_")
         bot.reply_to(message, safe_response, parse_mode='Markdown')
         
@@ -78,7 +96,7 @@ def send_vip_status(message):
     except Exception as e:
         bot.reply_to(message, f"❌ Системна помилка: {str(e)}")
 
-# 4. Главный цикл запуска
+# 4. Головний цикл запуску
 if __name__ == "__main__":
     print("Бот контролю VIP запущений...")
     bot.infinity_polling()
