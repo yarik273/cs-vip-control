@@ -94,7 +94,32 @@
     "steam_id": "STEAM_2:0:992348060",
     "privilege": "VIP PREMIUM",
     "expire_date": "2026-08-22"
+  },
+  {
+    "nickname": "ternopil",
+    "steam_id": "STEAM_2:0:1765152185",
+    "privilege": "VIP PREMIUM",
+    "expire_date": "2026-08-23"
   }
+  {
+    "nickname": "KOTT",
+    "steam_id": "STEAM_2:0:227265448",
+    "privilege": "VIP PREMIUM",
+    "expire_date": "2026-08-23"
+  },
+  {
+    "nickname": "nevidomui",
+    "steam_id": "STEAM_0:1:911737669",
+    "privilege": "VIP PREMIUM",
+    "expire_date": "2026-08-23"
+  },
+  {
+    "nickname": "nevidomui",
+    "steam_id": "STEAM_0:1:953009936",
+    "privilege": "VIP PREMIUM",
+    "expire_date": "2026-08-23"
+  }
+  
   ]
   
 
