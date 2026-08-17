@@ -142,6 +142,18 @@
     "steam_id": "STEAM_2:1:12162726",
     "privilege": "VIP PREMIUM",
     "expire_date": "2026-08-29"
+  },
+  {
+    "nickname": "Вовчик",
+    "steam_id": "STEAM_2:0:574901246",
+    "privilege": "VIP PREMIUM",
+    "expire_date": "2026-08-31"
+  },
+  {
+    "nickname": "Невідомий",
+    "steam_id": "STEAM_0:1:919363714",
+    "privilege": "VIP PREMIUM",
+    "expire_date": "2026-08-31"
   }
     
   ]
