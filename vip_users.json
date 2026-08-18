@@ -154,8 +154,14 @@
     "steam_id": "STEAM_0:1:919363714",
     "privilege": "VIP PREMIUM",
     "expire_date": "2026-08-31"
-  }
-    
+  },
+  {
+   "nickname": "Сумской",
+    "steam_id": "STEAM_2:0:1311520352",
+    "privilege": "VIP PREMIUM",
+    "expire_date": "2026-09-01" 
+  }  
+
   ]
   
 
