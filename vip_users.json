@@ -156,11 +156,30 @@
     "expire_date": "2026-08-31"
   },
   {
-   "nickname": "Сумской",
+   "nickname": "TQL | .Kotik",
+    "steam_id": "STEAM_0:0:636063282",
+    "privilege": "SPONSOR",
+    "expire_date": "2026-09-16" 
+  }, 
+  {
+    "nickname": "Сумской",
     "steam_id": "STEAM_2:0:1311520352",
     "privilege": "VIP PREMIUM",
     "expire_date": "2026-09-01" 
-  }  
+  }, 
+  {
+    "nickname": "47",
+    "steam_id": "STEAM_2:0:1985081565",
+    "privilege": "VIP PREMIUM",
+    "expire_date": "2027-09-01" 
+  },
+  {
+  
+    "nickname": "[LC] Фокус Покус",
+    "steam_id": "STEAM_0:1:534393009",
+    "privilege": "VIP PREMIUM",
+    "expire_date": "2027-09-02"
+  }
 
   ]
   
