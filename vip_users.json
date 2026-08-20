@@ -169,9 +169,15 @@
   },
   {
     "nickname": "Vadimka",
-    "steam_id": "STEAM_0:0:832510593",
+    "steam_id": "STEAM_0:0:832510592",
     "privilege": "VIP PREMIUM",
     "expire_date": "2026-09-02"
+  },
+  {
+    "nickname": "Limon4ik",
+    "steam_id": "STEAM_0:1:714226146",
+    "privilege": "VIP PREMIUM",
+    "expire_date": "2026-09-03"
   },
   {
     "nickname": "ФокусПокус",
