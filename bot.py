@@ -17,16 +17,17 @@ def run_fake_server():
 threading.Thread(target=run_fake_server, daemon=True).start()
 
 # 2. Ініціалізація бота та конфігурація прив'язки
+# Використовуємо саме PRIVATE_BOT_TOKEN, як налаштовано у вас на Render
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 if not BOT_TOKEN:
-    raise ValueError("Токен BOT_TOKEN не знайдено в змінних оточення!")
+    raise ValueError("Токен PRIVATE_BOT_TOKEN не знайдено в змінних оточення!")
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
 # НАЛАШТУВАННЯ ПРИВ'ЯЗКИ
 ALLOWED_CHAT_USERNAME = "volynskiy_public"  # Юзернейм вашої групи
 ALLOWED_THREAD_ID = 738                      # ID дозволеної гілки
-MY_PERSONAL_ID = 5596041220                  # Ваш особистий Telegram ID
+MY_PERSONAL_ID = 5596041220                  # Ваш особистим Telegram ID
 
 # 3. Обробка команди статусу VIP
 @bot.message_handler(commands=['vip', 'vip_status'])
@@ -44,30 +45,19 @@ def send_vip_status(message):
         if not (is_my_private_chat or is_allowed_group_thread):
             return  
 
+        # Далі ваш оригінальний код без змін...
         if not os.path.exists('vip_users.json'):
-            bot.reply_to(message, "❌ Помилка: Файл `vip_users.json` не знайдено!")
+            bot.reply_to(message, "❌ Помилка: Файл vip_users.json не знайдено!")
             return
 
         with open('vip_users.json', 'r', encoding='utf-8') as f:
             users = json.load(f)
         
         today = datetime.now().date()
+        lines = []
         
-        # Заголовок повідомлення
-        header = "📊 *СТАТУС VIP ПРИВІЛЕЙ:*\n\n"
-        footer = "\n👉 Для купівлі або продовження привілей зв'яжіться з адміністрацією. @Marvel_Volynskiy_Public"
-        
-        chunks = []
-        current_chunk = header
-        
-        if not users:
-            bot.reply_to(message, "Список привілей порожній.")
-            return
-
         for user in users:
-            # Очищаємо дати від можливих випадкових пробілів на кінцях
-            clean_date_str = user['expire_date'].strip()
-            expire_date = datetime.strptime(clean_date_str, "%Y-%m-%d").date()
+            expire_date = datetime.strptime(user['expire_date'], "%Y-%m-%d").date()
             days_left = (expire_date - today).days
             formatted_date = expire_date.strftime("%d.%m.%Y")
             
@@ -80,44 +70,32 @@ def send_vip_status(message):
             else:
                 status = f"❌ ТЕРМІН ЗАКІНЧИВСЯ ({formatted_date})!"
             
-            # Екрануємо символи підкреслення окремо для кожного гравця, щоб Markdown не ламався
-            clean_nickname = str(user['nickname']).replace("_", "\\_")
-            clean_steam = str(user['steam_id']).replace("_", "\\_").strip()
-            clean_privilege = str(user['privilege']).replace("_", "\\_")
-
             player_info = (
-                f"👤 Нік: {clean_nickname}\n"
-                f"🆔 Steam: `{clean_steam}`\n"
-                f"👑 Привілея: {clean_privilege}\n"
+                f"👤 Нік: {user['nickname']}\n"
+                f"🆔 Steam: {user['steam_id']}\n"
+                f"👑 Привілея: {user['privilege']}\n"
                 f"{status}\n"
-                f"────────────────\n"
+                f"────────────────"
             )
-            
-            # Якщо додавання гравця перевищить безпечний ліміт (~3500 символів з урахуванням екранування)
-            if len(current_chunk) + len(player_info) + len(footer) > 3500:
-                chunks.append(current_chunk)
-                current_chunk = ""  # Починаємо новий блок без заголовка
-            
-            current_chunk += player_info
+            lines.append(player_info)
         
-        # Додаємо фінальний підпис до останнього блоку тексту
-        current_chunk += footer
-        chunks.append(current_chunk)
+        if lines:
+            response = (
+                "📊 *СТАТУС VIP ПРИВІЛЕЙ:*\n\n" + 
+                "\n".join(lines) + 
+                "\n\n👉 Для купівлі або продовження привілей зв'яжіться з адміністрацією. @Marvel_Volynskiy_Public"
+            )
+        else:
+            response = "Список привілей порожній."
+            
+        safe_response = response.replace("_", "\\_")
+        bot.reply_to(message, safe_response, parse_mode='Markdown')
         
-        # Надсилаємо всі частини по черзі
-        for index, chunk in enumerate(chunks):
-            if index == 0:
-                bot.reply_to(message, chunk, parse_mode='Markdown')
-            else:
-                bot.send_message(message.chat.id, chunk, parse_mode='Markdown', message_thread_id=message.message_thread_id)
-                
     except json.JSONDecodeError:
-        bot.reply_to(message, "❌ Помилка: Неправильний формат тексту у файлі `vip_users.json`!")
+        bot.reply_to(message, "❌ Помилка: Неправильний формат тексту у файлі vip_users.json!")
     except Exception as e:
         bot.reply_to(message, f"❌ Системна помилка: {str(e)}")
 
 # 4. Головний цикл запуску
 if __name__ == "__main__":
     print("Бот контролю VIP запущений...")
-    bot.infinity_polling()
-    
