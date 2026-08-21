@@ -16,18 +16,18 @@ def run_fake_server():
 
 threading.Thread(target=run_fake_server, daemon=True).start()
 
-# 2. Ініціалізація бота та конфігурація прив'язки
-# Використовуємо саме PRIVATE_BOT_TOKEN, як налаштовано у вас на Render
-BOT_TOKEN = os.environ.get('BOT_TOKEN')
+# 2. Ініціалізація бота
+# Змінено на PRIVATE_BOT_TOKEN, щоб точно збігалося з вашими налаштуваннями Render
+BOT_TOKEN = os.environ.get('PRIVATE_BOT_TOKEN')
 if not BOT_TOKEN:
-    raise ValueError("Токен PRIVATE_BOT_TOKEN не знайдено в змінних оточення!")
+    raise ValueError("Токен PRIVATE_BOT_TOKEN не знайдено в змінних оточення Render!")
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
 # НАЛАШТУВАННЯ ПРИВ'ЯЗКИ
 ALLOWED_CHAT_USERNAME = "volynskiy_public"  # Юзернейм вашої групи
 ALLOWED_THREAD_ID = 738                      # ID дозволеної гілки
-MY_PERSONAL_ID = 5596041220                  # Ваш особистим Telegram ID
+MY_PERSONAL_ID = 5596041220                  # Ваш особистий Telegram ID
 
 # 3. Обробка команди статусу VIP
 @bot.message_handler(commands=['vip', 'vip_status'])
@@ -45,7 +45,6 @@ def send_vip_status(message):
         if not (is_my_private_chat or is_allowed_group_thread):
             return  
 
-        # Далі ваш оригінальний код без змін...
         if not os.path.exists('vip_users.json'):
             bot.reply_to(message, "❌ Помилка: Файл vip_users.json не знайдено!")
             return
@@ -99,3 +98,6 @@ def send_vip_status(message):
 # 4. Головний цикл запуску
 if __name__ == "__main__":
     print("Бот контролю VIP запущений...")
+    # ДОДАНО: Цей рядок змушує бота працювати безперервно і очікувати на команди
+    bot.infinity_polling()
+    
