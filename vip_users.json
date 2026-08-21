@@ -18,12 +18,6 @@
     "expire_date": "2026-09-11"
   },
   {
-    "nickname": "Данчик пипидаст",
-    "steam_id": "STEAM_0:0:552322781",
-    "privilege": "VIP PREMIUM",
-    "expire_date": "2026-08-20"
-  },
-  {
     "nickname": "babai",
     "steam_id": "STEAM_0:1:521352295",
     "privilege": "VIP PREMIUM",
@@ -136,7 +130,25 @@
     "steam_id": "STEAM_0:0:832510592",
     "privilege": "VIP PREMIUM",
     "expire_date": "2026-09-02"
-  }
+  },
+  {
+    "nickname": "TQLKotik",
+    "steam_id": "STEAM_0:0:636063282",
+    "privilege": "SPONSOR",
+    "expire_date": "2026-09-16" 
+  },
+  {
+    "nickname": "Фокус Покус",
+    "steam_id": "STEAM_0:1:534393009",
+    "privilege": "VIP PREMIUM ",
+    "expire_date": "2026-09-02" 
+  },
+  {
+    "nickname": "Limon4ik",
+    "steam_id": "STEAM_0:1:714226146",
+    "privilege": "VIP PREMIUM ",
+    "expire_date": "2026-09-03"
+  }  
 ]
 
 
