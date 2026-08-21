@@ -24,12 +24,6 @@
     "expire_date": "2026-08-22"
   },
   {
-    "nickname": "Ymri No Ne Sei4as",
-    "steam_id": "STEAM_2:0:992348060",
-    "privilege": "VIP PREMIUM",
-    "expire_date": "2026-08-22"
-  },
-  {
     "nickname": "ternopil",
     "steam_id": "STEAM_2:0:1765152185",
     "privilege": "VIP PREMIUM",
@@ -148,7 +142,19 @@
     "steam_id": "STEAM_0:1:714226146",
     "privilege": "VIP PREMIUM ",
     "expire_date": "2026-09-03"
-  }  
+  },
+  {
+    "nickname": "UMKA_lor",
+    "steam_id": "STEAM_2:1:1686023308",
+    "privilege": "VIP PREMIUM ",
+    "expire_date": "2026-09-04"
+  },
+  {
+    "nickname": "NoNsToP4iK",
+    "steam_id": "STEAM_2:1:773398716",
+    "privilege": "PAC KATANA2",
+    "expire_date": "2026-09-21"
+  } 
 ]
 
 
