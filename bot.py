@@ -1,3 +1,4 @@
+Trockenbau und Bodenlegen 75175 Pforzheim:
 import os
 import socket
 import struct
@@ -5,22 +6,22 @@ import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import telebot
 
-# Мікро-веб-сервер для проходження перевірки працездатності (Health Check)
+# Мікро-веб-сервер для проходження перевірки Render
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
         self.wfile.write(b"Bot is running successfully!")
     def do_HEAD(self):
-        self.send_response(200)
-        self.end_headers()   
+            self.send_response(200)
+            self.end_headers()   
 
 def run_web_server():
     port = int(os.environ.get("PORT", 10000))
     server = HTTPServer(('0.0.0.0', port), SimpleHTTPRequestHandler)
     server.serve_forever()
 
-# --- ДАНІ ВАШОГО БОТА І СЕРВЕРА ---
+# --- ДАНІ ВАШЕГО БОТА І СЕРВЕРА ---
 TOKEN = os.environ.get("TELEGRAM_TOKEN")
 
 SERVER_IP = "91.211.118.90"
@@ -30,60 +31,103 @@ bot = telebot.TeleBot(TOKEN)
 bot.remove_webhook()
 
 def decode_text(byte_data):
-    """Безпечно декодує назву сервера та карти у правильному кодуванні"""
-    for encoding in ['utf-8', 'cp1251', 'latin-1']:
-        try:
-            return byte_data.decode(encoding).strip()
-        except Exception:
-            continue
-    return "unknown"
-
-def get_cs_status_direct():
-    """Прямий запит до сервера за протоколом A2S_INFO без посередників"""
-    client = None
+    """Безпечно декодує текст з сервера"""
     try:
-        # Створюємо чистий UDP сокет без прив'язки до конкретного інтерфейсу (ідеально для Railway)
-        client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        client.settimeout(4.0)
+        return byte_data.decode('utf-8').strip()
+    except Exception:
+        try:
+            return byte_data.decode('cp1251', errors='ignore').strip()
+        except Exception:
+            return byte_data.decode('latin-1', errors='ignore').strip()
+
+def get_challenge_token(client, ip, port, request_header):
+    """Отримує захисний challenge-токен від сервера CS 1.6"""
+    req = b'\xFF\xFF\xFF\xFF' + request_header + b'\xFF\xFF\xFF\xFF'
+    client.sendto(req, (ip, port))
+    try:
+        data, _ = client.recvfrom(4096)
+        if data.startswith(b'\xFF\xFF\xFF\xFFA'):
+            return data[5:9]
+    except Exception:
+        pass
+    return b'\xFF\xFF\xFF\xFF'
+
+def get_cs_players(client, ip, port):
+    """Отримує список гравців з кількістю їхніх вбивств (фрагів)"""
+    token = get_challenge_token(client, ip, port, b'U')
+    req = b'\xFF\xFF\xFF\xFFU' + token
+    client.sendto(req, (ip, port))
+    
+    try:
+        data, _ = client.recvfrom(65535)
+        if not data.startswith(b'\xFF\xFF\xFF\xFFD'):
+            return []
         
-        # Стандартний пакет Source Engine Query для CS 1.6
+        payload = data[5:]
+        if len(payload) == 0:
+            return []
+            
+        num_players = int(payload[0])  # ПОВЕРНЕНО [0]
+        payload = payload[1:]
+        players_list = []
+        
+        for _ in range(num_players):
+            if len(payload) < 2:
+                break
+            payload = payload[1:]  # Пропуск індексу
+            
+            name_end = payload.find(b'\x00')
+            if name_end == -1:
+                break
+            name = decode_text(payload[:name_end])
+            payload = payload[name_end + 1:]
+            
+            if len(payload) < 8:
+                break
+            frags = struct.unpack('<i', payload[:4])[0]  # ПОВЕРНЕНО [0]
+            payload = payload[8:]
+            
+            if name:
+                players_list.append({"name": name, "frags": frags})
+                
+        players_list.sort(key=lambda x: x["frags"], reverse=True)
+        return players_list
+    except Exception:
+        return []
+
+def get_cs_status_full():
+    """Збирає статус сервера у вигляді чистого тексту"""
+    try:
+        client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        client.settimeout(2.5)
+        
         info_request = b'\xFF\xFF\xFF\xFFTSource Engine Query\x00'
         client.sendto(info_request, (SERVER_IP, SERVER_PORT))
         
         data, _ = client.recvfrom(4096)
-        
-        # Перевіряємо заголовок відповіді (має бути S або I)
-        if len(data) < 5 or data[:4] != b'\xFF\xFF\xFF\xFF':
-            return None
-            
         payload = data[5:]
         
-        # 1. Читання імені сервера
-        name_end = payload.find(b'\x00')
-        if name_end == -1: return None
-        server_name = decode_text(payload[:name_end]).lstrip('0Оo○◦ \t')
-        payload = payload[name_end + 1:]
+        # Читання назви сервера
+        server_name_end = payload.find(b'\x00')
+        server_name = decode_text(payload[:server_name_end])
+        server_name = server_name.lstrip('0Оo○◦ \t')
+        payload = payload[server_name_end + 1:]
         
-        # 2. Читання поточної карти
+        # Читання карти
         map_end = payload.find(b'\x00')
-        if map_end == -1: return None
         current_map = decode_text(payload[:map_end])
         payload = payload[map_end + 1:]
         
-        # 3. Пропускаємо назву папки (game directory) та назву гри
-        for _ in range(2):
+        # Пропуск папки та назви гри
+
+for _ in range(2):
             end = payload.find(b'\x00')
-            if end != -1:
-                payload = payload[end + 1:]
-                
-        # 4. Читання ID гри (2 байти)
-        if len(payload) < 2: return None
-        payload = payload[2:]
-        
-        # 5. Витягуємо точну кількість людей та максимальні слоти
-        if len(payload) < 2: return None
-        players_count = int(payload[0])
-        max_players = int(payload[1])
+            payload = payload[end + 1:]
+            # Читання кількості гравців
+        players_count = int(payload[2]) if len(payload) >= 3 else 0  # ПОВЕРНЕНО [2]
+        max_players = int(payload[3]) if len(payload) >= 4 else 0   # ПОВЕРНЕНО [3]
+            
+        players = get_cs_players(client, SERVER_IP, SERVER_PORT)
         
         text = f"⚙️ Моніторинг {server_name}\n\n"
         text += f"🖥️ {server_name}\n"
@@ -91,67 +135,58 @@ def get_cs_status_direct():
         text += f"🗺️ Карта: {current_map}\n"
         text += f"👥 Гравці: {players_count}/{max_players}\n\n"
         
-        if players_count > 0:
-            text += f"🎮 _На сервері зараз грає {players_count} людей. Приєднуйтесь!_\n"
+        if players_count > 0 and players:
+            for idx, p in enumerate(players, 1):
+                if idx == 1:
+                    emoji = "🥇"
+                elif idx == 2:
+                    emoji = "🥈"
+                elif idx == 3:
+                    emoji = "🥉"
+                else:
+                    emoji = "🎮"
+                text += f"{emoji} {p['name']} — {p['frags']} вбивств\n"
+        elif players_count > 0 and not players:
+            text += "⏳ _Гравці підключаються до карти..._\n"
         else:
-            text += "💤 _На сервері зараз немає гравців._\n"
+            text += "💤 _На сервері немає гравців._\n"
             
-        return text
-
-    except socket.timeout:
-        return "timeout"
-    except Exception as e:
-        return f"error: {str(e)}"
-    finally:
-        if client:
-            client.close() # Гарантоване закриття сокету
-
-def get_cs_status_full():
-    """Головний диспетчер збору інформації з резервним текстовим варіантом"""
-    result = get_cs_status_direct()
-    
-    if result and not result.startswith("timeout") and not result.startswith("error"):
-        return {"status": "online", "text": result}
+        return {"status": "online", "text": text}
         
-    # Якщо прямий запит заблоковано хмарою, використовуємо стабільну резервну копію з моніторингу
-    try:
-        url = "https://gamecms.org"
-        res = requests.get(url, timeout=4.0).json()
-        if res and res.get("status") != "offline":
-            s_name = res.get("name", "VOLYNSKIY_PUBLIC").lstrip('0Оo○◦ \t')
-            c_map = res.get("map", "de_dust2")
-            p_count = res.get("players", 0)
-            m_players = res.get("max_players", 32)
-            
-            text = f"⚙️ Моніторинг {s_name}\n\n"
-            text += f"🖥️ {s_name}\n"
-            text += f"🌐 IP: {SERVER_IP}:{SERVER_PORT}\n"
-            text += f"🗺️ Карта: {c_map}\n"
-            text += f"👥 Гравці: {p_count}/{m_players}\n\n"
-            text += "🎮 _Заходьте грати прямо зараз!_"
-            return {"status": "online", "text": text}
-    except Exception:
-        pass
-
-    # Якщо взагалі все відмовило, виводимо базовий живий текст, щоб бот не мовчав
-    return {
-        "status": "online", 
-        "text": f"⚙️ Моніторинг VOLYNSKIY_PUBLIC\n\n🖥️ VOLYNSKIY_PUBLIC [UA]\n🌐 IP: {SERVER_IP}:{SERVER_PORT}\n🗺️ Карта: de_dust2_2x2\n👥 Сервер доступний та онлайн! 👍\n\n🎮 _Заходьте грати прямо зараз!_"
-    }
+    except socket.timeout:
+        return {"status": "offline", "text": f"🔴 *Статус сервера*: OFFLINE ❌\n\nСервер {SERVER_IP}:{SERVER_PORT} зараз недоступний або вимкнений."}
+    except Exception as e:
+        return {"status": "error", "text": "⚠️ *Помилка*: Не вдалося зв'язатися з ігровим сервером."}
 
 @bot.message_handler(commands=['info', 'server'])
 def send_cs_status(message):
     data = get_cs_status_full()
+    
     MAIN_BANNER_ID = "AgACAgIAAxkBAAOgak6BkYsMaEy0JS3SUaoIQmyWCoAAAv8caxvTMHBKqvUcUE0TuaIBAAMCAAN5AAM8BA"
+    
+    # Визначаємо ID гілки (топіка), де викликали команду
     thread_id = message.message_thread_id
     
-    try:
-        bot.send_photo(chat_id=message.chat.id, photo=MAIN_BANNER_ID, caption=data["text"], message_thread_id=thread_id)
-    except Exception:
-        bot.send_message(chat_id=message.chat.id, text=data["text"], message_thread_id=thread_id, reply_to_message_id=message.message_id)
+    if data.get("status") == "online":
+        try:
+            bot.send_photo(
+                chat_id=message.chat.id, 
+                photo=MAIN_BANNER_ID, 
+                caption=data["text"], 
+                message_thread_id=thread_id
+            )
+            return
+        except Exception:
+            pass
+            
+    bot.send_message(
+        chat_id=message.chat.id, 
+        text=data["text"], 
+        message_thread_id=thread_id,
+        reply_to_message_id=message.message_id
+    )
 
 if __name__ == "__main__":
     threading.Thread(target=run_web_server, daemon=True).start()
-    print("Telegram A2S Direct Bot started successfully...")
+    print("Telegram bot started successfully...")
     bot.polling(none_stop=True)
-    
