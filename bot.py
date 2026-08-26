@@ -1,4 +1,3 @@
-Trockenbau und Bodenlegen 75175 Pforzheim:
 import os
 import socket
 import struct
