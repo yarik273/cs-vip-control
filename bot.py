@@ -128,10 +128,6 @@ for _ in range(2):
             
         players = get_cs_players(client, SERVER_IP, SERVER_PORT)
 
-except Exception as e:
-            print(f"Помилка під час обробки даних гравців: {e}")
-            players_count, max_players, players = 0, 0, []
-
         text = f"⚙️ Моніторинг {server_name}\n\n"
         text += f"🖥️ {server_name}\n"
         text += f"🌐 IP: {SERVER_IP}:{SERVER_PORT}\n"
