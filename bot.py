@@ -127,7 +127,9 @@ for _ in range(2):
         max_players = int(payload[3]) if len(payload) >= 4 else 0   # ПОВЕРНЕНО [3]
             
         players = get_cs_players(client, SERVER_IP, SERVER_PORT)
-        
+except Exception as e:
+            print(f"Помилка під час обробки даних гравців: {e}")
+            # Тут можна додати логіку на випадок помилки, наприклад: players_count, max_players = 0, 0      
         text = f"⚙️ Моніторинг {server_name}\n\n"
         text += f"🖥️ {server_name}\n"
         text += f"🌐 IP: {SERVER_IP}:{SERVER_PORT}\n"
