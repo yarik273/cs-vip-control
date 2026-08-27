@@ -21,7 +21,8 @@ def run_web_server():
     server.serve_forever()
 
 # --- КОНФІГУРАЦІЯ БОТА ТА ІГРОВОГО СЕРВЕРА ---
-TOKEN = os.environ.get("TELEGRAM_TOKEN")
+# Перевіряємо обидва варіанти назви токена, щоб точно не було помилки з Render
+TOKEN = os.environ.get("TELEGRAM_TOKEN") or os.environ.get("BOT_TOKEN")
 
 SERVER_IP = "91.211.118.90"
 SERVER_PORT = 27036
@@ -52,7 +53,7 @@ def get_challenge_token(client, ip, port, request_header):
     return b'\xFF\xFF\xFF\xFF'
 
 def get_cs_players(client, ip, port):
-    """Отримує точний список гравців та їхні фраги"""
+    """Отримує точний список гравців та їхні фраги (З ПОВЕРНЕНИМ ІНДЕКСОМ [0])"""
     token = get_challenge_token(client, ip, port, b'U')
     req = b'\xFF\xFF\xFF\xFFU' + token
     client.sendto(req, (ip, port))
@@ -66,7 +67,7 @@ def get_cs_players(client, ip, port):
         if len(payload) == 0:
             return []
             
-        num_players = int(payload[0])
+        num_players = int(payload[0])  # ПОВЕРНЕНО [0]
         payload = payload[1:]
         players_list = []
         
@@ -83,7 +84,7 @@ def get_cs_players(client, ip, port):
             
             if len(payload) < 8:
                 break
-            frags = struct.unpack('<i', payload[:4])[0]
+            frags = struct.unpack('<i', payload[:4])[0]  # ПОВЕРНЕНО [0]
             payload = payload[8:]
             
             if name:
@@ -95,7 +96,7 @@ def get_cs_players(client, ip, port):
         return []
 
 def get_cs_status_full():
-    """Збирає та форматує дані про сервер у текст"""
+    """Збирає та форматує дані про сервер у текст (З ПОВЕРНЕНИМИ ІНДЕКСАМИ [2] та [3])"""
     try:
         client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         client.settimeout(2.5)
@@ -117,15 +118,15 @@ def get_cs_status_full():
         current_map = decode_text(payload[:map_end])
         payload = payload[map_end + 1:]
         
-        # Безпечний пропуск папки та назви гри (структура повністю виправлена)
+        # Безпечний пропуск папки та назви гри
         for _ in range(2):
             end = payload.find(b'\x00')
             if end != -1:
                 payload = payload[end + 1:]
                 
-        # Читання кількості гравців з перевіркою довжини пакету
-        players_count = int(payload[2]) if len(payload) >= 3 else 0
-        max_players = int(payload[3]) if len(payload) >= 4 else 0
+        # Читання кількості гравців з вашими оригінальними індексами
+        players_count = int(payload[2]) if len(payload) >= 3 else 0  # ПОВЕРНЕНО [2]
+        max_players = int(payload[3]) if len(payload) >= 4 else 0   # ПОВЕРНЕНО [3]
             
         players = get_cs_players(client, SERVER_IP, SERVER_PORT)
 
@@ -164,14 +165,13 @@ def send_cs_status(message):
     
     MAIN_BANNER_ID = "AgACAgIAAxkBAAOgak6BkYsMaEy0JS3SUaoIQmyWCoAAAv8caxvTMHBKqvUcUE0TuaIBAAMCAAN5AAM8BA"
     
-    # Визначаємо ID гілки: працює лише якщо це група або супергрупа з топіками
+    # Визначаємо ID гілки: працює в групах/супергрупах і автоматично ігнорується в ПП
     thread_id = None
     if message.chat.type in ['group', 'supergroup']:
         thread_id = getattr(message, 'message_thread_id', None)
     
     if data.get("status") == "online":
         try:
-            # Спроба надіслати фото (в ПП або в топік групи)
             bot.send_photo(
                 chat_id=message.chat.id, 
                 photo=MAIN_BANNER_ID, 
@@ -182,9 +182,8 @@ def send_cs_status(message):
             )
             return
         except Exception as banner_error:
-            print(f"Помилка банера (можливо, інший токен бота): {banner_error}. Надсилаю чистий текст.")
+            print(f"Помилка банера: {banner_error}. Надсилаю чистий текст.")
             
-    # Запасний або стандартний варіант відправки чистого тексту
     try:
         bot.send_message(
             chat_id=message.chat.id, 
@@ -194,11 +193,10 @@ def send_cs_status(message):
             parse_mode="Markdown"
         )
     except Exception as e:
-        print(f"Критична помилка відправки повідомлення в Telegram: {e}")
+        print(f"Критична помилка відправки повідомлення: {e}")
 
 if __name__ == "__main__":
-    # Запуск мікро-сервера в окремому потоці для Render
     threading.Thread(target=run_web_server, daemon=True).start()
     print("Telegram bot started successfully...")
     bot.polling(none_stop=True)
-    
+        
