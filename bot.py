@@ -5,7 +5,7 @@ import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import telebot
 
-# Мікро-веб-сервер для успішного проходження перевірки Render
+# Мікро-веб-сервер для проходження перевірки Render
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -21,7 +21,6 @@ def run_web_server():
     server.serve_forever()
 
 # --- КОНФІГУРАЦІЯ БОТА ТА ІГРОВОГО СЕРВЕРА ---
-# Перевіряємо обидва варіанти назви токена, щоб точно не було помилки з Render
 TOKEN = os.environ.get("TELEGRAM_TOKEN") or os.environ.get("BOT_TOKEN")
 
 SERVER_IP = "91.211.118.90"
@@ -53,12 +52,12 @@ def get_challenge_token(client, ip, port, request_header):
     return b'\xFF\xFF\xFF\xFF'
 
 def get_cs_players(client, ip, port):
-    """Отримує точний список гравців та їхні фраги (З ПОВЕРНЕНИМ ІНДЕКСОМ [0])"""
-    token = get_challenge_token(client, ip, port, b'U')
-    req = b'\xFF\xFF\xFF\xFFU' + token
-    client.sendto(req, (ip, port))
-    
+    """Отримує список гравців з безпечним витягуванням чисел з кортежів struct.unpack"""
     try:
+        token = get_challenge_token(client, ip, port, b'U')
+        req = b'\xFF\xFF\xFF\xFFU' + token
+        client.sendto(req, (ip, port))
+        
         data, _ = client.recvfrom(65535)
         if not data.startswith(b'\xFF\xFF\xFF\xFFD'):
             return []
@@ -67,7 +66,7 @@ def get_cs_players(client, ip, port):
         if len(payload) == 0:
             return []
             
-        num_players = int(payload[0])  # ПОВЕРНЕНО [0]
+        num_players = int(payload[0]) if len(payload) >= 1 else 0
         payload = payload[1:]
         players_list = []
         
@@ -84,7 +83,9 @@ def get_cs_players(client, ip, port):
             
             if len(payload) < 8:
                 break
-            frags = struct.unpack('<i', payload[:4])[0]  # ПОВЕРНЕНО [0]
+            
+            # ВИПРАВЛЕНО: беремо строго перший елемент кортежу [0], щоб отримати чисте число int
+            frags = struct.unpack('<i', payload[:4])[0]
             payload = payload[8:]
             
             if name:
@@ -92,11 +93,13 @@ def get_cs_players(client, ip, port):
                 
         players_list.sort(key=lambda x: x["frags"], reverse=True)
         return players_list
-    except Exception:
+    except Exception as e:
+        print(f"Помилка в get_cs_players: {e}")
         return []
 
 def get_cs_status_full():
-    """Збирає та форматує дані про сервер у текст (З ПОВЕРНЕНИМИ ІНДЕКСАМИ [2] та [3])"""
+    """Збирає статус сервера. Кожен крок повністю ізольований від падіння."""
+    client = None
     try:
         client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         client.settimeout(2.5)
@@ -105,49 +108,55 @@ def get_cs_status_full():
         client.sendto(info_request, (SERVER_IP, SERVER_PORT))
         
         data, _ = client.recvfrom(4096)
+        if not data or len(data) < 5:
+            raise Exception("Мало даних від сервера")
+            
         payload = data[5:]
         
         # Читання назви сервера
         server_name_end = payload.find(b'\x00')
+        if server_name_end == -1: raise Exception("Не знайдено назву сервера")
         server_name = decode_text(payload[:server_name_end])
         server_name = server_name.lstrip('0Оo○◦ \t')
         payload = payload[server_name_end + 1:]
         
         # Читання карти
         map_end = payload.find(b'\x00')
+        if map_end == -1: raise Exception("Не знайдено карту")
         current_map = decode_text(payload[:map_end])
         payload = payload[map_end + 1:]
         
-        # Безпечний пропуск папки та назви гри
+        # Пропуск папки та короткої назви гри
         for _ in range(2):
             end = payload.find(b'\x00')
             if end != -1:
                 payload = payload[end + 1:]
                 
-        # Читання кількості гравців з вашими оригінальними індексами
-        players_count = int(payload[2]) if len(payload) >= 3 else 0  # ПОВЕРНЕНО [2]
-        max_players = int(payload[3]) if len(payload) >= 4 else 0   # ПОВЕРНЕНО [3]
+        # ВИПРАВЛЕНО: Безпечне зчитування кількості гравців з масиву байтів
+        players_count = int(payload[2]) if len(payload) >= 3 else 0
+        max_players = int(payload[3]) if len(payload) >= 4 else 0
             
-        players = get_cs_players(client, SERVER_IP, SERVER_PORT)
+        # Безпечно витягуємо список гравців
+        players = []
+        try:
+            players = get_cs_players(client, SERVER_IP, SERVER_PORT)
+        except Exception as e:
+            print(f"Помилка парсингу гравців всередині статусу: {e}")
 
-        text = f"⚙️ Моніторинг {server_name}\n\n"
-        text += f"🖥️ {server_name}\n"
+        text = f"⚙️ *Моніторинг сервера*\n\n"
+        text += f"🖥️ Назва: {server_name}\n"
         text += f"🌐 IP: `{SERVER_IP}:{SERVER_PORT}`\n"
         text += f"🗺️ Карта: {current_map}\n"
         text += f"👥 Гравці: {players_count}/{max_players}\n\n"
         
         if players_count > 0 and players:
             for idx, p in enumerate(players, 1):
-                if idx == 1:
-                    emoji = "🥇"
-                elif idx == 2:
-                    emoji = "🥈"
-                elif idx == 3:
-                    emoji = "🥉"
-                else:
-                    emoji = "🎮"
+                if idx == 1: emoji = "🥇"
+                elif idx == 2: emoji = "🥈"
+                elif idx == 3: emoji = "🥉"
+                else: emoji = "🎮"
                 text += f"{emoji} {p['name']} — {p['frags']} вбивств\n"
-        elif players_count > 0 and not players:
+        elif players_count > 0:
             text += "⏳ _Гравці підключаються до карти..._\n"
         else:
             text += "💤 _На сервері немає гравців._\n"
@@ -155,36 +164,40 @@ def get_cs_status_full():
         return {"status": "online", "text": text}
         
     except socket.timeout:
-        return {"status": "offline", "text": f"🔴 *Статус сервера*: OFFLINE ❌\n\nСервер `{SERVER_IP}:{SERVER_PORT}` зараз недоступний або вимкнений."}
+        return {"status": "offline", "text": f"🔴 *Статус сервера*: OFFLINE ❌\n\nСервер `{SERVER_IP}:{SERVER_PORT}` зараз недоступний."}
     except Exception as e:
-        return {"status": "error", "text": "⚠️ *Помилка*: Не вдалося зв'язатися з ігровим сервером під час обробки даних."}
+        print(f"Помилка в get_cs_status_full: {e}")
+        return {"status": "error", "text": f"⚠️ *Сервер онлайн*, але виникла помилка обробки пакетів даних."}
+    finally:
+        if client:
+            client.close()
 
 @bot.message_handler(commands=['info', 'server'])
 def send_cs_status(message):
-    data = get_cs_status_full()
-    
-    MAIN_BANNER_ID = "AgACAgIAAxkBAAOgak6BkYsMaEy0JS3SUaoIQmyWCoAAAv8caxvTMHBKqvUcUE0TuaIBAAMCAAN5AAM8BA"
-    
-    # Визначаємо ID гілки: працює в групах/супергрупах і автоматично ігнорується в ПП
-    thread_id = None
-    if message.chat.type in ['group', 'supergroup']:
-        thread_id = getattr(message, 'message_thread_id', None)
-    
-    if data.get("status") == "online":
-        try:
-            bot.send_photo(
-                chat_id=message.chat.id, 
-                photo=MAIN_BANNER_ID, 
-                caption=data["text"], 
-                message_thread_id=thread_id,
-                reply_to_message_id=message.message_id,
-                parse_mode="Markdown"
-            )
-            return
-        except Exception as banner_error:
-            print(f"Помилка банера: {banner_error}. Надсилаю чистий текст.")
-            
     try:
+        data = get_cs_status_full()
+        MAIN_BANNER_ID = "AgACAgIAAxkBAAOgak6BkYsMaEy0JS3SUaoIQmyWCoAAAv8caxvTMHBKqvUcUE0TuaIBAAMCAAN5AAM8BA"
+        
+        # Визначаємо ID гілки для груп і ставимо None для особистих чатів
+        thread_id = None
+        if message.chat.type in ['group', 'supergroup']:
+            thread_id = getattr(message, 'message_thread_id', None)
+        
+        if data.get("status") == "online":
+            try:
+                bot.send_photo(
+                    chat_id=message.chat.id, 
+                    photo=MAIN_BANNER_ID, 
+                    caption=data["text"], 
+                    message_thread_id=thread_id,
+                    reply_to_message_id=message.message_id,
+                    parse_mode="Markdown"
+                )
+                return
+            except Exception as banner_error:
+                print(f"Помилка банера: {banner_error}. Відправляю чистий текст.")
+                
+        # Якщо банер впав або сервер оффлайн — надсилаємо чистий текст
         bot.send_message(
             chat_id=message.chat.id, 
             text=data["text"], 
@@ -193,10 +206,10 @@ def send_cs_status(message):
             parse_mode="Markdown"
         )
     except Exception as e:
-        print(f"Критична помилка відправки повідомлення: {e}")
+        print(f"Критичний збій в обробнику команд Telegram: {e}")
 
 if __name__ == "__main__":
     threading.Thread(target=run_web_server, daemon=True).start()
     print("Telegram bot started successfully...")
     bot.polling(none_stop=True)
-        
+                               
