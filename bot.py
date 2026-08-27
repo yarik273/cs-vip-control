@@ -12,8 +12,8 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b"Bot is running successfully!")
     def do_HEAD(self):
-            self.send_response(200)
-            self.end_headers()   
+        self.send_response(200)
+        self.end_headers()   
 
 def run_web_server():
     port = int(os.environ.get("PORT", 10000))
@@ -117,14 +117,15 @@ def get_cs_status_full():
         current_map = decode_text(payload[:map_end])
         payload = payload[map_end + 1:]
         
-        # Пропуск папки та назви гри
-
-for _ in range(2):
+        # Пропуск папки та назви гри (Виправлено структуру та відступи)
+        for _ in range(2):
             end = payload.find(b'\x00')
-            payload = payload[end + 1:]
-            # Читання кількості гравців
-        players_count = int(payload[2]) if len(payload) >= 3 else 0  # ПОВЕРНЕНО [2]
-        max_players = int(payload[3]) if len(payload) >= 4 else 0   # ПОВЕРНЕНО [3]
+            if end != -1:
+                payload = payload[end + 1:]
+                
+        # Читання кількості гравців
+        players_count = int(payload[2]) if len(payload) >= 3 else 0
+        max_players = int(payload[3]) if len(payload) >= 4 else 0
             
         players = get_cs_players(client, SERVER_IP, SERVER_PORT)
 
@@ -189,3 +190,4 @@ if __name__ == "__main__":
     threading.Thread(target=run_web_server, daemon=True).start()
     print("Telegram bot started successfully...")
     bot.polling(none_stop=True)
+    
