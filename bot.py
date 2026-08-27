@@ -119,7 +119,7 @@ def get_cs_status_full():
         
         # Пропуск папки та назви гри
 
-for _ in range(2):
+        for _ in range(2):
             end = payload.find(b'\x00')
             payload = payload[end + 1:]
             # Читання кількості гравців
