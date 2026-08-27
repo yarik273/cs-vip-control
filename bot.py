@@ -5,7 +5,7 @@ import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import telebot
 
-# Мікро-веб-сервер для проходження перевірки Render
+# Мікро-веб-сервер для успішного проходження перевірки Render
 class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -20,7 +20,7 @@ def run_web_server():
     server = HTTPServer(('0.0.0.0', port), SimpleHTTPRequestHandler)
     server.serve_forever()
 
-# --- ДАНІ ВАШЕГО БОТА І СЕРВЕРА ---
+# --- КОНФІГУРАЦІЯ БОТА ТА ІГРОВОГО СЕРВЕРА ---
 TOKEN = os.environ.get("TELEGRAM_TOKEN")
 
 SERVER_IP = "91.211.118.90"
@@ -30,7 +30,7 @@ bot = telebot.TeleBot(TOKEN)
 bot.remove_webhook()
 
 def decode_text(byte_data):
-    """Безпечно декодує текст з сервера"""
+    """Безпечно декодує текст з сервера у правильне кодування"""
     try:
         return byte_data.decode('utf-8').strip()
     except Exception:
@@ -52,7 +52,7 @@ def get_challenge_token(client, ip, port, request_header):
     return b'\xFF\xFF\xFF\xFF'
 
 def get_cs_players(client, ip, port):
-    """Отримує список гравців з кількістю їхніх вбивств (фрагів)"""
+    """Отримує точний список гравців та їхні фраги"""
     token = get_challenge_token(client, ip, port, b'U')
     req = b'\xFF\xFF\xFF\xFFU' + token
     client.sendto(req, (ip, port))
@@ -66,14 +66,14 @@ def get_cs_players(client, ip, port):
         if len(payload) == 0:
             return []
             
-        num_players = int(payload[0])  # ПОВЕРНЕНО [0]
+        num_players = int(payload[0])
         payload = payload[1:]
         players_list = []
         
         for _ in range(num_players):
             if len(payload) < 2:
                 break
-            payload = payload[1:]  # Пропуск індексу
+            payload = payload[1:]  # Пропуск індексу гравця
             
             name_end = payload.find(b'\x00')
             if name_end == -1:
@@ -83,7 +83,7 @@ def get_cs_players(client, ip, port):
             
             if len(payload) < 8:
                 break
-            frags = struct.unpack('<i', payload[:4])[0]  # ПОВЕРНЕНО [0]
+            frags = struct.unpack('<i', payload[:4])[0]
             payload = payload[8:]
             
             if name:
@@ -95,7 +95,7 @@ def get_cs_players(client, ip, port):
         return []
 
 def get_cs_status_full():
-    """Збирає статус сервера у вигляді чистого тексту"""
+    """Збирає та форматує дані про сервер у текст"""
     try:
         client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         client.settimeout(2.5)
@@ -117,13 +117,13 @@ def get_cs_status_full():
         current_map = decode_text(payload[:map_end])
         payload = payload[map_end + 1:]
         
-        # Пропуск папки та назви гри (Виправлено структуру та відступи)
+        # Безпечний пропуск папки та назви гри (структура повністю виправлена)
         for _ in range(2):
             end = payload.find(b'\x00')
             if end != -1:
                 payload = payload[end + 1:]
                 
-        # Читання кількості гравців
+        # Читання кількості гравців з перевіркою довжини пакету
         players_count = int(payload[2]) if len(payload) >= 3 else 0
         max_players = int(payload[3]) if len(payload) >= 4 else 0
             
@@ -131,7 +131,7 @@ def get_cs_status_full():
 
         text = f"⚙️ Моніторинг {server_name}\n\n"
         text += f"🖥️ {server_name}\n"
-        text += f"🌐 IP: {SERVER_IP}:{SERVER_PORT}\n"
+        text += f"🌐 IP: `{SERVER_IP}:{SERVER_PORT}`\n"
         text += f"🗺️ Карта: {current_map}\n"
         text += f"👥 Гравці: {players_count}/{max_players}\n\n"
         
@@ -154,9 +154,9 @@ def get_cs_status_full():
         return {"status": "online", "text": text}
         
     except socket.timeout:
-        return {"status": "offline", "text": f"🔴 *Статус сервера*: OFFLINE ❌\n\nСервер {SERVER_IP}:{SERVER_PORT} зараз недоступний або вимкнений."}
+        return {"status": "offline", "text": f"🔴 *Статус сервера*: OFFLINE ❌\n\nСервер `{SERVER_IP}:{SERVER_PORT}` зараз недоступний або вимкнений."}
     except Exception as e:
-        return {"status": "error", "text": "⚠️ *Помилка*: Не вдалося зв'язатися з ігровим сервером."}
+        return {"status": "error", "text": "⚠️ *Помилка*: Не вдалося зв'язатися з ігровим сервером під час обробки даних."}
 
 @bot.message_handler(commands=['info', 'server'])
 def send_cs_status(message):
@@ -164,29 +164,40 @@ def send_cs_status(message):
     
     MAIN_BANNER_ID = "AgACAgIAAxkBAAOgak6BkYsMaEy0JS3SUaoIQmyWCoAAAv8caxvTMHBKqvUcUE0TuaIBAAMCAAN5AAM8BA"
     
-    # Визначаємо ID гілки (топіка), де викликали команду
-    thread_id = message.message_thread_id
+    # Визначаємо ID гілки: працює лише якщо це група або супергрупа з топіками
+    thread_id = None
+    if message.chat.type in ['group', 'supergroup']:
+        thread_id = getattr(message, 'message_thread_id', None)
     
     if data.get("status") == "online":
         try:
+            # Спроба надіслати фото (в ПП або в топік групи)
             bot.send_photo(
                 chat_id=message.chat.id, 
                 photo=MAIN_BANNER_ID, 
                 caption=data["text"], 
-                message_thread_id=thread_id
+                message_thread_id=thread_id,
+                reply_to_message_id=message.message_id,
+                parse_mode="Markdown"
             )
             return
-        except Exception:
-            pass
+        except Exception as banner_error:
+            print(f"Помилка банера (можливо, інший токен бота): {banner_error}. Надсилаю чистий текст.")
             
-    bot.send_message(
-        chat_id=message.chat.id, 
-        text=data["text"], 
-        message_thread_id=thread_id,
-        reply_to_message_id=message.message_id
-    )
+    # Запасний або стандартний варіант відправки чистого тексту
+    try:
+        bot.send_message(
+            chat_id=message.chat.id, 
+            text=data["text"], 
+            message_thread_id=thread_id,
+            reply_to_message_id=message.message_id,
+            parse_mode="Markdown"
+        )
+    except Exception as e:
+        print(f"Критична помилка відправки повідомлення в Telegram: {e}")
 
 if __name__ == "__main__":
+    # Запуск мікро-сервера в окремому потоці для Render
     threading.Thread(target=run_web_server, daemon=True).start()
     print("Telegram bot started successfully...")
     bot.polling(none_stop=True)
